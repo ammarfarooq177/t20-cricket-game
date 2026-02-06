@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T20 World Cup 2026 - Sequential Game with SPNE</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1000px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #718096;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+        .controls {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+        .control-group h3 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .payoff-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .input-field {
+            display: flex;
+            flex-direction: column;
+        }
+        .input-field label {
+            font-size: 13px;
+            color: #4a5568;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .input-row input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 2px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        .input-row input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .input-row span {
+            font-size: 12px;
+            color: #718096;
+            min-width: 80px;
+        }
+        .spne-display {
+            background: #edf2f7;
+            border-left: 4px solid #48bb78;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .spne-display h4 {
+            color: #2d3748;
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        .spne-display p {
+            margin: 5px 0;
+            color: #4a5568;
+            font-size: 14px;
+        }
+        .game-tree {
+            margin: 40px 0;
+            position: relative;
+        }
+        svg {
+            width: 100%;
+            height: auto;
+        }
+        .node circle {
+            transition: all 0.3s ease;
+        }
+        .pakistan-node circle {
+            fill: #00a86b;
+            stroke: #006644;
+            stroke-width: 3;
+        }
+        .india-node circle {
+            fill: #ff9933;
+            stroke: #cc7829;
+            stroke-width: 3;
+        }
+        .outcome-node circle {
+            fill: #4299e1;
+            stroke: #2c5aa0;
+            stroke-width: 3;
+        }
+        text {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        .node-label {
+            font-size: 16px;
+            font-weight: bold;
+            fill: white;
+        }
+        .choice-label {
+            font-size: 14px;
+            font-weight: 600;
+            fill: #2d3748;
+        }
+        .payoff-label {
+            font-size: 15px;
+            font-weight: bold;
+            fill: white;
+        }
+        line {
+            stroke: #4a5568;
+            stroke-width: 3;
+            transition: all 0.3s ease;
+        }
+        .spne-path {
+            stroke: #48bb78 !important;
+            stroke-width: 6 !important;
+            filter: drop-shadow(0 0 8px rgba(72, 187, 120, 0.6));
+        }
+        .spne-node circle {
+            stroke: #48bb78 !important;
+            stroke-width: 5 !important;
+            filter: drop-shadow(0 0 10px rgba(72, 187, 120, 0.5));
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏏 T20 World Cup 2026 Sequential Game</h1>
+        <p class="subtitle">Pakistan moves first, then India responds - SPNE highlighted in green</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <h3>Adjust Payoffs (India, Pakistan)</h3>
+                <div class="payoff-inputs">
+                    <div class="input-field">
+                        <label>Both Play</label>
+                        <div class="input-row">
+                            <input type="number" id="pp-ind" value="100">
+                            <span>India</span>
+                        </div>
+                        <div class="input-row">
+                            <input type="number" id="pp-pak" value="100">
+                            <span>Pakistan</span>
+                        </div>
+                    </div>
+                    
+                    <div class="input-field">
+                        <label>PAK plays, IND doesn't</label>
+                        <div class="input-row">
+                            <input type="number" id="pn-ind" value="50">
+                            <span>India</span>
+                        </div>
+                        <div class="input-row">
+                            <input type="number" id="pn-pak" value="50">
+                            <span>Pakistan</span>
+                        </div>
+                    </div>
+                    
+                    <div class="input-field">
+                        <label>IND plays, PAK doesn't</label>
+                        <div class="input-row">
+                            <input type="number" id="np-ind" value="40">
+                            <span>India</span>
+                        </div>
+                        <div class="input-row">
+                            <input type="number" id="np-pak" value="-30">
+                            <span>Pakistan</span>
+                        </div>
+                    </div>
+                    
+                    <div class="input-field">
+                        <label>Neither Plays</label>
+                        <div class="input-row">
+                            <input type="number" id="nn-ind" value="10">
+                            <span>India</span>
+                        </div>
+                        <div class="input-row">
+                            <input type="number" id="nn-pak" value="-10">
+                            <span>Pakistan</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="spne-display" id="spne-result">
+                <h4>🎯 Subgame Perfect Nash Equilibrium</h4>
+                <p id="spne-text"></p>
+            </div>
+        </div>
+        
+        <div class="game-tree">
+            <svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" id="game-svg">
+                <!-- Lines (will be updated dynamically) -->
+                <line id="line-pak-play" x1="400" y1="100" x2="200" y2="250" />
+                <line id="line-pak-noplay" x1="400" y1="100" x2="600" y2="250" />
+                
+                <line id="line-pp" x1="200" y1="250" x2="100" y2="400" />
+                <line id="line-pn" x1="200" y1="250" x2="300" y2="400" />
+                
+                <line id="line-np" x1="600" y1="250" x2="500" y2="400" />
+                <line id="line-nn" x1="600" y1="250" x2="700" y2="400" />
+                
+                <!-- Choice labels on edges -->
+                <text x="280" y="160" class="choice-label">Play</text>
+                <text x="480" y="160" class="choice-label">Don't Play</text>
+                
+                <text x="130" y="310" class="choice-label">Play</text>
+                <text x="230" y="310" class="choice-label">Don't Play</text>
+                
+                <text x="480" y="310" class="choice-label">Play</text>
+                <text x="630" y="310" class="choice-label">Don't Play</text>
+                
+                <!-- Pakistan's initial node -->
+                <g class="node pakistan-node" id="node-pak">
+                    <circle cx="400" cy="100" r="30" />
+                    <text x="400" y="107" class="node-label" text-anchor="middle">PAK</text>
+                </g>
+                
+                <!-- India's decision nodes -->
+                <g class="node india-node" id="node-ind-left">
+                    <circle cx="200" cy="250" r="30" />
+                    <text x="200" y="257" class="node-label" text-anchor="middle">IND</text>
+                </g>
+                
+                <g class="node india-node" id="node-ind-right">
+                    <circle cx="600" cy="250" r="30" />
+                    <text x="600" y="257" class="node-label" text-anchor="middle">IND</text>
+                </g>
+                
+                <!-- Outcome nodes -->
+                <g class="node outcome-node" id="node-pp">
+                    <circle cx="100" cy="400" r="30" />
+                    <text x="100" y="397" class="payoff-label" text-anchor="middle" font-size="13" id="payoff-pp-1"></text>
+                    <text x="100" y="412" class="payoff-label" text-anchor="middle" font-size="13" id="payoff-pp-2"></text>
+                </g>
+                
+                <g class="node outcome-node" id="node-pn">
+                    <circle cx="300" cy="400" r="30" />
+                    <text x="300" y="397" class="payoff-label" text-anchor="middle" font-size="13" id="payoff-pn-1"></text>
+                    <text x="300" y="412" class="payoff-label" text-anchor="middle" font-size="13" id="payoff-pn-2"></text>
+                </g>
+                
+                <g class="node outcome-node" id="node-np">
+                    <circle cx="500" cy="400" r="30" />
+                    <text x="500" y="397" class="payoff-label" text-anchor="middle" font-size="13" id="payoff-np-1"></text>
+                    <text x="500" y="412" class="payoff-label" text-anchor="middle" font-size="13" id="payoff-np-2"></text>
+                </g>
+                
+                <g class="node outcome-node" id="node-nn">
+                    <circle cx="700" cy="400" r="30" />
+                    <text x="700" y="397" class="payoff-label" text-anchor="middle" font-size="13" id="payoff-nn-1"></text>
+                    <text x="700" y="412" class="payoff-label" text-anchor="middle" font-size="13" id="payoff-nn-2"></text>
+                </g>
+                
+                <!-- Outcome descriptions -->
+                <text x="100" y="455" class="choice-label" text-anchor="middle" font-size="12">Both Play</text>
+                <text x="300" y="455" class="choice-label" text-anchor="middle" font-size="12">PAK plays</text>
+                <text x="300" y="470" class="choice-label" text-anchor="middle" font-size="12">IND doesn't</text>
+                
+                <text x="500" y="455" class="choice-label" text-anchor="middle" font-size="12">IND plays</text>
+                <text x="500" y="470" class="choice-label" text-anchor="middle" font-size="12">PAK doesn't</text>
+                
+                <text x="700" y="455" class="choice-label" text-anchor="middle" font-size="12">Neither Plays</text>
+            </svg>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #00a86b; border-color: #006644;"></div>
+                <span>Pakistan (moves first)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ff9933; border-color: #cc7829;"></div>
+                <span>India (responds)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #4299e1; border-color: #2c5aa0;"></div>
+                <span>Outcome Payoffs</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #48bb78; border-color: #48bb78;"></div>
+                <span>SPNE Path</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Payoff structure
+        let payoffs = {
+            pp: { ind: 100, pak: 100 },  // Both play
+            pn: { ind: 50, pak: 50 },    // Pak plays, India doesn't
+            np: { ind: 40, pak: -30 },   // India plays, Pak doesn't
+            nn: { ind: 10, pak: -10 }    // Neither plays
+        };
+        
+        // Initialize inputs and calculate SPNE
+        function init() {
+            // Set up event listeners for all inputs
+            const inputs = ['pp-ind', 'pp-pak', 'pn-ind', 'pn-pak', 'np-ind', 'np-pak', 'nn-ind', 'nn-pak'];
+            inputs.forEach(id => {
+                document.getElementById(id).addEventListener('input', updateGame);
+            });
+            
+            updateGame();
+        }
+        
+        function updateGame() {
+            // Read payoffs from inputs
+            payoffs.pp.ind = parseFloat(document.getElementById('pp-ind').value) || 0;
+            payoffs.pp.pak = parseFloat(document.getElementById('pp-pak').value) || 0;
+            payoffs.pn.ind = parseFloat(document.getElementById('pn-ind').value) || 0;
+            payoffs.pn.pak = parseFloat(document.getElementById('pn-pak').value) || 0;
+            payoffs.np.ind = parseFloat(document.getElementById('np-ind').value) || 0;
+            payoffs.np.pak = parseFloat(document.getElementById('np-pak').value) || 0;
+            payoffs.nn.ind = parseFloat(document.getElementById('nn-ind').value) || 0;
+            payoffs.nn.pak = parseFloat(document.getElementById('nn-pak').value) || 0;
+            
+            // Update payoff display
+            updatePayoffDisplay();
+            
+            // Calculate SPNE using backward induction
+            const spne = calculateSPNE();
+            
+            // Update visualization
+            highlightSPNE(spne);
+            
+            // Display SPNE text
+            displaySPNE(spne);
+        }
+        
+        function updatePayoffDisplay() {
+            document.getElementById('payoff-pp-1').textContent = `(${payoffs.pp.ind},`;
+            document.getElementById('payoff-pp-2').textContent = `${payoffs.pp.pak})`;
+            
+            document.getElementById('payoff-pn-1').textContent = `(${payoffs.pn.ind},`;
+            document.getElementById('payoff-pn-2').textContent = `${payoffs.pn.pak})`;
+            
+            document.getElementById('payoff-np-1').textContent = `(${payoffs.np.ind},`;
+            document.getElementById('payoff-np-2').textContent = `${payoffs.np.pak})`;
+            
+            document.getElementById('payoff-nn-1').textContent = `(${payoffs.nn.ind},`;
+            document.getElementById('payoff-nn-2').textContent = `${payoffs.nn.pak})`;
+        }
+        
+        function calculateSPNE() {
+            // Backward induction
+            
+            // Step 1: India's best response when Pakistan plays
+            const indBR_PakPlays = payoffs.pp.ind >= payoffs.pn.ind ? 'play' : 'noplay';
+            
+            // Step 2: India's best response when Pakistan doesn't play
+            const indBR_PakNoPlay = payoffs.np.ind >= payoffs.nn.ind ? 'play' : 'noplay';
+            
+            // Step 3: Pakistan's payoffs for each choice, given India's best responses
+            let pakPayoff_Play, pakPayoff_NoPlay;
+            
+            if (indBR_PakPlays === 'play') {
+                pakPayoff_Play = payoffs.pp.pak;
+            } else {
+                pakPayoff_Play = payoffs.pn.pak;
+            }
+            
+            if (indBR_PakNoPlay === 'play') {
+                pakPayoff_NoPlay = payoffs.np.pak;
+            } else {
+                pakPayoff_NoPlay = payoffs.nn.pak;
+            }
+            
+            // Step 4: Pakistan's optimal choice
+            const pakChoice = pakPayoff_Play >= pakPayoff_NoPlay ? 'play' : 'noplay';
+            
+            // Determine final outcome
+            let outcome;
+            if (pakChoice === 'play') {
+                outcome = indBR_PakPlays === 'play' ? 'pp' : 'pn';
+            } else {
+                outcome = indBR_PakNoPlay === 'play' ? 'np' : 'nn';
+            }
+            
+            return {
+                pakChoice: pakChoice,
+                indBR_PakPlays: indBR_PakPlays,
+                indBR_PakNoPlay: indBR_PakNoPlay,
+                outcome: outcome
+            };
+        }
+        
+        function highlightSPNE(spne) {
+            // Remove all existing highlights
+            document.querySelectorAll('.spne-path').forEach(el => el.classList.remove('spne-path'));
+            document.querySelectorAll('.spne-node').forEach(el => el.classList.remove('spne-node'));
+            
+            // Highlight Pakistan's node
+            document.getElementById('node-pak').classList.add('spne-node');
+            
+            // Highlight path based on Pakistan's choice
+            if (spne.pakChoice === 'play') {
+                document.getElementById('line-pak-play').classList.add('spne-path');
+                document.getElementById('node-ind-left').classList.add('spne-node');
+                
+                // Highlight India's choice when Pakistan plays
+                if (spne.indBR_PakPlays === 'play') {
+                    document.getElementById('line-pp').classList.add('spne-path');
+                    document.getElementById('node-pp').classList.add('spne-node');
+                } else {
+                    document.getElementById('line-pn').classList.add('spne-path');
+                    document.getElementById('node-pn').classList.add('spne-node');
+                }
+            } else {
+                document.getElementById('line-pak-noplay').classList.add('spne-path');
+                document.getElementById('node-ind-right').classList.add('spne-node');
+                
+                // Highlight India's choice when Pakistan doesn't play
+                if (spne.indBR_PakNoPlay === 'play') {
+                    document.getElementById('line-np').classList.add('spne-path');
+                    document.getElementById('node-np').classList.add('spne-node');
+                } else {
+                    document.getElementById('line-nn').classList.add('spne-path');
+                    document.getElementById('node-nn').classList.add('spne-node');
+                }
+            }
+        }
+        
+        function displaySPNE(spne) {
+            const outcomeNames = {
+                pp: 'Both Play',
+                pn: 'Pakistan Plays, India Doesn\'t',
+                np: 'India Plays, Pakistan Doesn\'t',
+                nn: 'Neither Plays'
+            };
+            
+            const pakAction = spne.pakChoice === 'play' ? 'Play' : 'Don\'t Play';
+            const indActionIfPlay = spne.indBR_PakPlays === 'play' ? 'Play' : 'Don\'t Play';
+            const indActionIfNoPlay = spne.indBR_PakNoPlay === 'play' ? 'Play' : 'Don\'t Play';
+            
+            const outcome = payoffs[spne.outcome];
+            
+            let text = `<strong>Pakistan's Strategy:</strong> ${pakAction}<br>`;
+            text += `<strong>India's Strategy:</strong> ${indActionIfPlay} if Pakistan plays; ${indActionIfNoPlay} if Pakistan doesn't play<br>`;
+            text += `<strong>Outcome:</strong> ${outcomeNames[spne.outcome]}<br>`;
+            text += `<strong>Payoffs:</strong> India = ${outcome.ind}, Pakistan = ${outcome.pak}`;
+            
+            document.getElementById('spne-text').innerHTML = text;
+        }
+        
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
